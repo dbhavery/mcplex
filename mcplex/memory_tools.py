@@ -104,7 +104,7 @@ async def search(
 
     try:
         coll = client.get_collection(name=collection)
-    except Exception:
+    except ValueError:
         return []
 
     results = coll.query(query_texts=[query], n_results=n_results)
