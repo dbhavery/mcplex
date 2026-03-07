@@ -1,0 +1,48 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "mcplex"
+version = "0.1.0"
+description = "MCP server for local AI models — Ollama, embeddings, vision, vector memory"
+authors = [{ name = "Donald Havery", email = "dbhavery@gmail.com" }]
+license = { text = "MIT" }
+readme = "README.md"
+requires-python = ">=3.10"
+keywords = ["mcp", "ollama", "local-ai", "embeddings", "vector-search", "chromadb"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+]
+dependencies = [
+    "mcp>=1.0.0",
+    "httpx>=0.28.0",
+    "pydantic>=2.0.0",
+]
+
+[project.optional-dependencies]
+memory = ["chromadb>=0.5.0"]
+dev = [
+    "pytest>=8.0.0",
+    "pytest-asyncio>=0.26.0",
+]
+
+[project.scripts]
+mcplex = "mcplex.server:main"
+
+[project.urls]
+Homepage = "https://github.com/dbhavery/mcplex"
+Repository = "https://github.com/dbhavery/mcplex"
+Issues = "https://github.com/dbhavery/mcplex/issues"
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+testpaths = ["tests"]
