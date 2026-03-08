@@ -1,63 +1,37 @@
-# mcplex
-[![CI](https://github.com/dbhavery/mcplex/actions/workflows/ci.yml/badge.svg)](https://github.com/dbhavery/mcplex/actions/workflows/ci.yml)
+# McPlex
 
-**MCP server for local AI models** -- expose Ollama, embeddings, vision, and vector memory to Claude Code and other MCP clients.
+MCP server that bridges local Ollama models to Claude Code and other MCP clients -- text generation, embeddings, vision, and vector memory, all running locally.
 
-[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
-[![Python 3.10+](https://img.shields.io/badge/python-3.10+-blue.svg)](https://www.python.org/downloads/)
-[![MCP](https://img.shields.io/badge/MCP-compatible-green.svg)](https://modelcontextprotocol.io)
+## Why I Built This
 
----
+Claude Code is powerful but cloud-only. Local models via Ollama are private and free but disconnected from MCP tooling. I needed a bridge: expose local models as MCP tools so Claude Code can delegate tasks to local inference (summarization, embedding, image analysis) without API costs or data leaving my machine. Any MCP-compatible client (Claude Code, Cursor, etc.) gets access with zero custom integration.
 
-## What is this?
+## What It Does
 
-mcplex is a [Model Context Protocol](https://modelcontextprotocol.io) server that bridges your **local AI models** to any MCP client. It gives Claude Code (or any MCP-compatible tool) direct access to:
+- **9 MCP tools** -- `generate`, `chat`, `embed`, `list_models`, `analyze_image`, `ocr_image`, `memory_store`, `memory_search`, `memory_list_collections`
+- **Zero cloud dependency** -- all inference runs locally via Ollama; no API keys needed
+- **ChromaDB vector memory** -- store and semantically search text with persistent local storage
+- **Vision and OCR** -- analyze images and extract text using local vision models (LLaVA)
+- **Drop-in MCP config** -- add 3 lines to Claude Code's MCP config and local models are available immediately
 
-- **Ollama models** -- generate text, chat, and list available models
-- **Embeddings** -- generate vector embeddings via local embedding models
-- **Vision** -- analyze images and extract text using local vision models (LLaVA, etc.)
-- **Vector memory** -- store and semantically search text using ChromaDB
+## Key Technical Decisions
 
-Everything runs locally. No API keys needed. No data leaves your machine.
+- **MCP protocol over custom API** -- standard protocol means any MCP client works without custom integration code. When a new MCP client launches, McPlex works with it automatically.
+- **Ollama over vLLM** -- simpler setup, built-in model management (`ollama pull`), runs on consumer hardware. vLLM is faster at scale but requires manual model configuration and more VRAM.
+- **Lazy ChromaDB loading** -- memory tools are optional. Core text/vision tools work without ChromaDB installed. `pip install mcplex[memory]` adds vector storage only when needed.
+- **Async HTTP via httpx** -- non-blocking Ollama API calls. Multiple tools can query different models concurrently without blocking the MCP event loop.
 
-## Features
-
-| Category | Tools | Description |
-|----------|-------|-------------|
-| **Text Generation** | `generate` | One-shot text generation with any Ollama model |
-| **Chat** | `chat` | Multi-turn conversation with message history |
-| **Embeddings** | `embed` | Generate vector embeddings for text |
-| **Model Management** | `list_models` | List all available Ollama models |
-| **Vision** | `analyze_image` | Describe/analyze images with a vision model |
-| **OCR** | `ocr_image` | Extract text from images |
-| **Memory Store** | `memory_store` | Store text + metadata in ChromaDB |
-| **Memory Search** | `memory_search` | Semantic search over stored memories |
-| **Memory List** | `memory_list_collections` | List all memory collections |
-
-## Requirements
-
-- Python 3.10+
-- [Ollama](https://ollama.ai) running locally (default: `http://localhost:11434`)
-- At least one Ollama model pulled (e.g., `ollama pull qwen3:8b`)
-
-## Installation
+## Quick Start
 
 ```bash
-# From PyPI (when published)
-pip install mcplex
+pip install mcplex              # Core (text + vision)
+pip install mcplex[memory]      # With ChromaDB vector memory
 
-# With vector memory support
-pip install mcplex[memory]
-
-# From source
-git clone https://github.com/dbhavery/mcplex.git
-cd mcplex
-pip install -e ".[memory,dev]"
+# Requires Ollama running locally
+ollama pull qwen3:8b            # Pull a model
 ```
 
-## Claude Code Integration
-
-Add mcplex to your Claude Code MCP configuration:
+Add to Claude Code MCP config:
 
 ```json
 {
@@ -70,158 +44,27 @@ Add mcplex to your Claude Code MCP configuration:
 }
 ```
 
-Or if running from source:
+Then ask Claude Code: *"Use the generate tool to summarize this file with qwen3:8b"*
 
-```json
-{
-  "mcpServers": {
-    "mcplex": {
-      "command": "python",
-      "args": ["-m", "mcplex.server"]
-    }
-  }
-}
-```
-
-Once configured, Claude Code can use your local models directly:
-
-> "Use the generate tool to summarize this file with qwen3:8b"
->
-> "Embed these three paragraphs and store them in the 'research' collection"
->
-> "Analyze this screenshot and extract all visible text"
-
-## Tool Reference
-
-### generate
-
-Send a prompt to a local Ollama model.
-
-| Parameter | Type | Default | Description |
-|-----------|------|---------|-------------|
-| `prompt` | `str` | *required* | The text prompt |
-| `model` | `str` | `qwen3:8b` | Ollama model name |
-| `temperature` | `float` | `0.7` | Sampling temperature (0.0-2.0) |
-| `max_tokens` | `int` | `2048` | Maximum tokens to generate |
-
-### chat
-
-Multi-turn chat with message history.
-
-| Parameter | Type | Default | Description |
-|-----------|------|---------|-------------|
-| `messages` | `list[{role, content}]` | *required* | Message history |
-| `model` | `str` | `qwen3:8b` | Ollama model name |
-| `temperature` | `float` | `0.7` | Sampling temperature |
-| `max_tokens` | `int` | `2048` | Maximum tokens |
-
-### embed
-
-Generate vector embeddings.
-
-| Parameter | Type | Default | Description |
-|-----------|------|---------|-------------|
-| `text` | `str \| list[str]` | *required* | Text to embed |
-| `model` | `str` | `nomic-embed-text` | Embedding model |
-
-### list_models
-
-List all available Ollama models. No parameters.
-
-### analyze_image
-
-Analyze an image with a local vision model.
-
-| Parameter | Type | Default | Description |
-|-----------|------|---------|-------------|
-| `image_path` | `str` | *required* | Path to image file |
-| `prompt` | `str` | `"Describe this image in detail."` | Question/instruction |
-| `model` | `str` | `llava` | Vision model name |
-
-### ocr_image
-
-Extract text from an image.
-
-| Parameter | Type | Default | Description |
-|-----------|------|---------|-------------|
-| `image_path` | `str` | *required* | Path to image file |
-| `model` | `str` | `llava` | Vision model name |
-
-### memory_store
-
-Store text in vector memory.
-
-| Parameter | Type | Default | Description |
-|-----------|------|---------|-------------|
-| `text` | `str` | *required* | Text to store |
-| `metadata` | `dict` | `None` | Optional key-value metadata |
-| `collection` | `str` | `"default"` | ChromaDB collection name |
-
-### memory_search
-
-Semantic search over stored memories.
-
-| Parameter | Type | Default | Description |
-|-----------|------|---------|-------------|
-| `query` | `str` | *required* | Search query |
-| `n_results` | `int` | `5` | Max results to return |
-| `collection` | `str` | `"default"` | ChromaDB collection name |
-
-### memory_list_collections
-
-List all ChromaDB collections. No parameters.
-
-## Configuration
-
-All configuration is via environment variables (or a `.env` file):
-
-| Variable | Default | Description |
-|----------|---------|-------------|
-| `MCPLEX_OLLAMA_URL` | `http://localhost:11434` | Ollama server URL |
-| `MCPLEX_DEFAULT_MODEL` | `qwen3:8b` | Default text model |
-| `MCPLEX_EMBED_MODEL` | `nomic-embed-text` | Default embedding model |
-| `MCPLEX_VISION_MODEL` | `llava` | Default vision model |
-| `MCPLEX_CHROMA_PATH` | `./mcplex_data/chroma` | ChromaDB storage path |
-| `MCPLEX_DEFAULT_TEMPERATURE` | `0.7` | Default sampling temperature |
-| `MCPLEX_DEFAULT_MAX_TOKENS` | `2048` | Default max tokens |
-
-## Architecture
-
-```
-MCP Client (Claude Code, etc.)
-    |
-    | stdio (JSON-RPC)
-    |
-mcplex server (FastMCP)
-    |
-    +-- ollama_tools -----> Ollama API (HTTP)
-    |                        localhost:11434
-    +-- vision_tools -----> Ollama API (with images)
-    |
-    +-- memory_tools -----> ChromaDB (local persistent)
-```
-
-- **Transport:** stdio (standard for CLI-based MCP clients)
-- **Ollama communication:** async HTTP via httpx
-- **Vector storage:** ChromaDB with persistent client (lazy-loaded)
-- **No API keys required** -- everything runs locally
-
-## Development
+Configuration via environment variables:
 
 ```bash
-git clone https://github.com/dbhavery/mcplex.git
-cd mcplex
-pip install -e ".[memory,dev]"
-
-# Run tests
-python -m pytest tests/ -v
-
-# Run the server
-mcplex
-# or
-python -m mcplex.server
+MCPLEX_OLLAMA_URL=http://localhost:11434
+MCPLEX_DEFAULT_MODEL=qwen3:8b
+MCPLEX_CHROMA_PATH=./mcplex_data/chroma
 ```
 
-## License
+## Lessons Learned
 
-[MIT](LICENSE) -- Copyright (c) 2026 Donald Havery
+**MCP tool schema design matters more than implementation quality.** Overly flexible schemas (e.g., a single `query` tool that accepts model, prompt, temperature, max_tokens, format, and system prompt) confuse LLM clients -- they don't know which parameters to set. Specific, well-documented tool signatures with sensible defaults (`generate` takes a prompt and optional model) produce much better tool-calling accuracy. I went through three schema iterations before landing on the current 9-tool design, and each simplification improved Claude Code's ability to use the tools correctly.
+
+## Tests
+
+```bash
+pip install -e ".[memory,dev]"
+pytest tests/ -v    # 24 tests
+```
+
+---
+
+MIT License. See [LICENSE](LICENSE).
