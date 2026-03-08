@@ -1,4 +1,5 @@
 # mcplex
+[![CI](https://github.com/dbhavery/mcplex/actions/workflows/ci.yml/badge.svg)](https://github.com/dbhavery/mcplex/actions/workflows/ci.yml)
 
 **MCP server for local AI models** -- expose Ollama, embeddings, vision, and vector memory to Claude Code and other MCP clients.
 
