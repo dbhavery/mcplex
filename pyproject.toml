@@ -6,7 +6,7 @@ build-backend = "hatchling.build"
 name = "mcplex"
 version = "0.1.0"
 description = "MCP server for local AI models — Ollama, embeddings, vision, vector memory"
-authors = [{ name = "Donald Havery", email = "dbhavery@gmail.com" }]
+authors = [{ name = "Donald Havery", email = "dbhavery@users.noreply.github.com" }]
 license = { text = "MIT" }
 readme = "README.md"
 requires-python = ">=3.10"
